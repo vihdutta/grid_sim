@@ -18,11 +18,24 @@ entities = [Entity(random.randint(1, CELLS), random.randint(1, CELLS), ENTITY_CO
 coins = [Coin(random.randint(1, CELLS), random.randint(1, CELLS), COIN_COLOR) for _ in range(COINS)]
 
 # draws grid lines
-def draw_grid(screen, grid_size, cell_size):
-    for x in range(0, grid_size, cell_size):
-        pygame.draw.line(screen, (50, 50, 50), (x, 0), (x, grid_size))
-    for y in range(0, grid_size, cell_size):
-        pygame.draw.line(screen, (50, 50, 50), (0, y), (grid_size, y))
+def draw_grid(screen, grid_pixel_size, cell_pixel_size):
+    for x in range(0, grid_pixel_size, cell_pixel_size):
+        pygame.draw.line(screen, (50, 50, 50), (x, 0), (x, grid_pixel_size))
+    for y in range(0, grid_pixel_size, cell_pixel_size):
+        pygame.draw.line(screen, (50, 50, 50), (0, y), (grid_pixel_size, y))
+
+def draw_scene(screen, grid_pixel_size, cell_pixel_size, grid_x, grid_y):
+    screen.fill((255, 255, 255))
+    grid_surface = pygame.Surface((grid_pixel_size, grid_pixel_size))
+    draw_grid(grid_surface, grid_pixel_size, cell_pixel_size)
+    screen.blit(grid_surface, (grid_x, grid_y))
+    font = pygame.font.SysFont("Futura", 30)
+    label = font.render(f"{CELLS}x{CELLS} grid", 1, (0, 0, 0))
+    screen.blit(label, (10, 10))
+    for entity in entities:
+        entity.draw(screen, cell_pixel_size, grid_x, grid_y)
+    for coin in coins:
+        coin.draw(screen, cell_pixel_size, grid_x, grid_y)
 
 def run_simulation():
     WINDOW_WIDTH, WINDOW_HEIGHT = 800, 600
@@ -65,15 +78,7 @@ def run_simulation():
         grid_x = (WINDOW_WIDTH - grid_pixel_size) // 2 + grid_x_offset
         grid_y = (WINDOW_HEIGHT - grid_pixel_size) // 2 + grid_y_offset
 
-        screen.fill((255, 255, 255))
-
-        grid_surface = pygame.Surface((grid_pixel_size, grid_pixel_size))
-        draw_grid(grid_surface, grid_pixel_size, cell_pixel_size)
-        screen.blit(grid_surface, (grid_x, grid_y))
-        for entity in entities:
-            entity.draw(screen, cell_pixel_size, grid_x, grid_y)
-        for coin in coins:
-            coin.draw(screen, cell_pixel_size, grid_x, grid_y)
+        draw_scene(screen, grid_pixel_size, cell_pixel_size, grid_x, grid_y)
 
         pygame.display.flip()
     pygame.quit()

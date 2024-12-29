@@ -7,10 +7,10 @@ class SimObject():
         self.color = color
 
     # converts cell to pixel coordinates then draws to gui
-    def draw(self, screen, cell_size, grid_x, grid_y):
-        pixel_x = grid_x + (self.x - 1) * cell_size
-        pixel_y = grid_y + (self.y - 1) * cell_size
-        pygame.draw.rect(screen, self.color, (pixel_x, pixel_y, cell_size, cell_size))
+    def draw(self, screen, cell_pixel_size, grid_x, grid_y):
+        pixel_x = grid_x + (self.x - 1) * cell_pixel_size
+        pixel_y = grid_y + (self.y - 1) * cell_pixel_size
+        pygame.draw.rect(screen, self.color, (pixel_x, pixel_y, cell_pixel_size, cell_pixel_size))
 
 class Entity(SimObject):
     def __init__(self, x, y, color):
