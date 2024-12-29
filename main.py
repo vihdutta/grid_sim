@@ -1,14 +1,21 @@
 import pygame
 import random
-from entity import Entity
+from sim_objects import Entity, Coin
 
 pygame.init()
 pygame.display.set_caption("Game Optimization Simulation")
 
 # set up variables
 CELLS = 5
+
+ENTITIES = 5
+COINS = 1
+
 ENTITY_COLOR = (50, 175, 50)
-entities = [Entity(random.randint(1, 5), random.randint(1, 5), ENTITY_COLOR) for _ in range(5)]
+COIN_COLOR = (255, 230, 10)
+
+entities = [Entity(random.randint(1, CELLS), random.randint(1, CELLS), ENTITY_COLOR) for _ in range(ENTITIES)]
+coins = [Coin(random.randint(1, CELLS), random.randint(1, CELLS), COIN_COLOR) for _ in range(COINS)]
 
 # draws grid lines
 def draw_grid(screen, grid_size, cell_size):
@@ -32,9 +39,8 @@ def run_simulation():
 
         # ensures the grid_size is an exact multiple
         # of cell_size so the cells aren't cut off
-        grid_pixel_size = WINDOW_HEIGHT * 0.8
-        cell_pixel_size = int(grid_pixel_size // CELLS)
-        grid_pixel_size = cell_pixel_size*CELLS
+        cell_pixel_size = int(WINDOW_HEIGHT * 0.8 // CELLS)
+        grid_pixel_size = cell_pixel_size * CELLS
 
         # center the grid
         grid_x = (WINDOW_WIDTH - grid_pixel_size) // 2
@@ -47,6 +53,8 @@ def run_simulation():
         screen.blit(grid_surface, (grid_x, grid_y))
         for entity in entities:
             entity.draw(screen, cell_pixel_size, grid_x, grid_y)
+        for coin in coins:
+            coin.draw(screen, cell_pixel_size, grid_x, grid_y)
 
         pygame.display.flip()
     pygame.quit()
