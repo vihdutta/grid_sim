@@ -1,13 +1,11 @@
 import pygame
-SPEED = 5
 
 class Entity:
-    def __init__(self, x, y, size, color):
+    def __init__(self, x, y, color):
         self.x = x
         self.y = y
         self.last_x = x
         self.last_y = y
-        self.size = size
         self.color = color
 
     def move(self, direction):
@@ -15,27 +13,29 @@ class Entity:
         self.last_y = self.y
 
         if direction == 0:  # up
-            self.y -= SPEED
+            self.y -= 1
         elif direction == 1:  # down
-            self.y += SPEED
+            self.y += 1
         elif direction == 2:  # left
-            self.x -= SPEED
+            self.x -= 1
         elif direction == 3:  # right
-            self.x += SPEED
+            self.x += 1
 
-    def constrain_to_bounds(self, WIDTH, HEIGHT):
-        self.x = max(0, min(WIDTH - self.size, self.x))
-        self.y = max(0, min(HEIGHT - self.size, self.y))
+    def constrain_to_bounds(self, cells):
+        self.x = max(1, cells)
+        self.y = max(1, cells)
 
-    def draw(self, screen):
-        pygame.draw.rect(screen, self.color, (self.x, self.y, self.size, self.size))
+    # converts cell to pixel coordinates then draws to gui
+    def draw(self, screen, cell_size, grid_x, grid_y):
+        pixel_x = grid_x + (self.x - 1) * cell_size
+        pixel_y = grid_y + (self.y - 1) * cell_size
+        pygame.draw.rect(screen, self.color, (pixel_x, pixel_y, cell_size, cell_size))
 
-    def check_collision(self, coin):
-        return pygame.Rect(self.x, self.y, self.size, self.size).colliderect(
-            pygame.Rect(coin.x, coin.y, coin.size, coin.size))
+    def check_collision(self, cell_size, coin):
+        return pygame.Rect(self.x, self.y, cell_size, cell_size).colliderect(
+            pygame.Rect(coin.x, coin.y, cell_size, cell_size))
     
 class Coin:
-    def __init__(self, x, y, size):
+    def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.size = size
