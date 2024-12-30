@@ -9,7 +9,8 @@ from helpers.sim_objects import Entity, Coin
 from testing import run_test_ai
 
 # set up variables
-RENDER = False
+RENDER = True
+DELAY = 100
 CELLS = 5
 GAME_DECISION_LIMIT = 2 * (CELLS-1) # lowest amount of steps to get from any point a to b
 
@@ -131,7 +132,7 @@ def train_ai(genome1, genome2, config):
         entities[0].move(output1.index(max(output1)), CELLS)
         entities[1].move(output2.index(max(output2)), CELLS)
         if RENDER:
-            pygame.time.wait(1000)
+            pygame.time.wait(DELAY)
 
         with open("sim_log.txt", "a") as log_file:
             log_file.write(f"Entity 1 position: ({entities[0].x}, {entities[0].y}), score: {entities[0].score}\n")
@@ -185,20 +186,21 @@ def eval_genomes(genomes, config):
             train_ai(genome1, genome2, config)
 
 def run_neat(config):
-    #p = neat.Checkpointer.restore_checkpoint('neat-checkpoint-10')
-    p = neat.Population(config)
+    p = neat.Checkpointer.restore_checkpoint('neat-checkpoint3-296')
+    #p = neat.Population(config)
     stats = neat.StatisticsReporter()
     p.add_reporter(neat.StdOutReporter(True))
     p.add_reporter(stats)
-    p.add_reporter(neat.Checkpointer(100))
-    winner = p.run(eval_genomes, 100)
+    p.add_reporter(neat.Checkpointer(50))
+    winner = p.run(eval_genomes, 2)
 
-    with open("best.pickle", "wb") as f:
+    with open(f"best.pickle", "wb") as f:
         pickle.dump(winner, f)
 
 def test_ai(config):
     with open("best.pickle", "rb") as f:
         winner = pickle.load(f)
+    winner.fitness = 0
     run_test_ai(winner, config)
 
 if __name__ == "__main__":
@@ -207,5 +209,8 @@ if __name__ == "__main__":
     config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
                          neat.DefaultSpeciesSet, neat.DefaultStagnation,
                          config_path)
+
     #run_neat(config)
-    test_ai(config)
+    for i in range(10000):
+        print(f"Test {i+1}")
+        test_ai(config)
