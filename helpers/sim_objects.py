@@ -35,13 +35,8 @@ class Entity(SimObject):
         self.__constrain_to_bounds(CELLS)
 
     def __constrain_to_bounds(self, CELLS):
-        self.x = max(0, min(self.x, CELLS-1))
-        self.y = max(0, min(self.y, CELLS-1))
-
-    def check_collision(self, cell_size, coin):
-        if (pygame.Rect(self.x, self.y, cell_size, cell_size).colliderect(
-            pygame.Rect(coin.x, coin.y, cell_size, cell_size))):
-            self.score += 1
+        self.x = max(1, min(self.x, CELLS-1))
+        self.y = max(1, min(self.y, CELLS-1))
     
 class Coin(SimObject):
     def __init__(self, x, y, color):
