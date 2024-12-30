@@ -1,12 +1,15 @@
+import neat.nn.feed_forward
 import pygame
 import random
 import math
 import neat
 import os
+import pickle
 from helpers.sim_objects import Entity, Coin
+from testing import run_test_ai
 
 # set up variables
-RENDER = True
+RENDER = False
 CELLS = 5
 GAME_DECISION_LIMIT = 2 * (CELLS-1) # lowest amount of steps to get from any point a to b
 
@@ -31,16 +34,20 @@ def draw_grid(screen, grid_pixel_size, cell_pixel_size):
     for y in range(0, grid_pixel_size, cell_pixel_size):
         pygame.draw.line(screen, (50, 50, 50), (0, y), (grid_pixel_size, y))
 
-def draw_scene(screen, entities, coins, grid_pixel_size, cell_pixel_size, grid_x, grid_y):
+def draw_scene(screen, entities, entity_map, coins, grid_pixel_size, cell_pixel_size, grid_x, grid_y):
     screen.fill((255, 255, 255))
     
     grid_surface = pygame.Surface((grid_pixel_size, grid_pixel_size))
     draw_grid(grid_surface, grid_pixel_size, cell_pixel_size)
     screen.blit(grid_surface, (grid_x, grid_y))
 
-    # font = pygame.font.SysFont("Futura", 30)
-    # label = font.render(f"{CELLS}x{CELLS} grid", 1, (0, 0, 0))
-    # screen.blit(label, (10, 10))
+    font = pygame.font.SysFont("Futura", 30)
+    grid_size_label = font.render(f"{CELLS}x{CELLS} grid", 1, (0, 0, 0))
+    genome1_fitness_label = font.render(f"entity 1 fitness: {round(entity_map[entities[0]].fitness, 2)}", 1, (0, 0, 0))
+    genome2_fitness_label = font.render(f"entity 2 fitness: {round(entity_map[entities[1]].fitness, 2)}", 1, (0, 0, 0))
+    screen.blit(grid_size_label, (10, 10))
+    screen.blit(genome1_fitness_label, (10, 30))
+    screen.blit(genome2_fitness_label, (10, 50))
 
     for entity in entities:
         entity.draw(screen, cell_pixel_size, grid_x, grid_y)
@@ -48,10 +55,13 @@ def draw_scene(screen, entities, coins, grid_pixel_size, cell_pixel_size, grid_x
         coin.draw(screen, cell_pixel_size, grid_x, grid_y)
 
 def train_ai(genome1, genome2, config):
+    with open("sim_log.txt", "a") as log_file:
+        log_file.write("(game starts)\n")
     entity_positions = generate_unique_positions(ENTITIES, CELLS)
     coin_positions = generate_unique_positions(COINS, CELLS, existing_positions=entity_positions)
     entities = [Entity(x, y, ENTITY_COLOR) for x, y in entity_positions]
     coins = [Coin(x, y, COIN_COLOR) for x, y in coin_positions]
+    entity_map = {entities[0]: genome1, entities[1]: genome2}
 
     if RENDER:
         pygame.init()
@@ -103,7 +113,7 @@ def train_ai(genome1, genome2, config):
             grid_x = (WINDOW_WIDTH - grid_pixel_size) // 2 + grid_x_offset
             grid_y = (WINDOW_HEIGHT - grid_pixel_size) // 2 + grid_y_offset
 
-            draw_scene(screen, entities, coins, grid_pixel_size, cell_pixel_size, grid_x, grid_y)
+            draw_scene(screen, entities, entity_map, coins, grid_pixel_size, cell_pixel_size, grid_x, grid_y)
             pygame.display.flip()
 
         output1 = net1.activate((
@@ -118,35 +128,51 @@ def train_ai(genome1, genome2, config):
             math.sqrt((entities[1].x - coins[0].x) ** 2 + (entities[1].y - coins[0].y) ** 2)
         ))
 
-        print(output1)
-        print(output2)
         entities[0].move(output1.index(max(output1)), CELLS)
         entities[1].move(output2.index(max(output2)), CELLS)
-        import time; time.sleep(1)
-        print(f"Entity 1 position: ({entities[0].x}, {entities[0].y})")
-        print(f"Entity 2 position: ({entities[1].x}, {entities[1].y})")
-        print(f"Coin position: ({coins[0].x}, {coins[0].y})")
+        if RENDER:
+            pygame.time.wait(1000)
+
+        with open("sim_log.txt", "a") as log_file:
+            log_file.write(f"Entity 1 position: ({entities[0].x}, {entities[0].y}), score: {entities[0].score}\n")
+            log_file.write(f"Entity 2 position: ({entities[1].x}, {entities[1].y}), score: {entities[1].score}\n")
+            log_file.write(f"Coin position: ({coins[0].x}, {coins[0].y})\n")
+
         scored = False
+        less_than_0 = False
         for entity in entities:
+            closer_score = entity.reward_for_closer(coins[0])
+            entity.score += closer_score
+            entity_map[entity].fitness += closer_score
+
             if (entity.x == coins[0].x and entity.y == coins[0].y):
-                entity.score += 1
-                print("SCORED!")
-                calculate_fitness(entities, genome1, genome2)
                 scored = True
+            if entity.score < 0:
+                less_than_0 = True
+
         if scored:
+            #print("SCORED")
+            with open("sim_log.txt", "a") as log_file:
+                log_file.write("SCORED\n")
+                log_file.write("(game ends)\n")
+            break
+        if less_than_0:
+            #print("LESS THAN 0")
+            with open("sim_log.txt", "a") as log_file:
+                log_file.write("LESS THAN 0\n")
+                log_file.write("(game ends)\n")
             break
 
         if decisions > GAME_DECISION_LIMIT:
-            print("GAME_DECISION_LIMIT REACHED")
+            #print("GAME_DECISION_LIMIT REACHED")
+            with open("sim_log.txt", "a") as log_file:
+                log_file.write("GAME_DECISION_LIMIT REACHED\n")
+                log_file.write("(game ends)\n")
             break
 
         decisions += 1
     if RENDER:
         pygame.quit()
-
-def calculate_fitness(entities, genome1, genome2):
-    genome1.fitness += entities[0].score
-    genome2.fitness += entities[1].score
 
 def eval_genomes(genomes, config):
     for i, (_, genome1) in enumerate(genomes):
@@ -159,14 +185,21 @@ def eval_genomes(genomes, config):
             train_ai(genome1, genome2, config)
 
 def run_neat(config):
-    #p = neat.Checkpointer.restore_checkpoint('neat-checkpoint-x')
+    #p = neat.Checkpointer.restore_checkpoint('neat-checkpoint-10')
     p = neat.Population(config)
     stats = neat.StatisticsReporter()
     p.add_reporter(neat.StdOutReporter(True))
     p.add_reporter(stats)
     p.add_reporter(neat.Checkpointer(100))
+    winner = p.run(eval_genomes, 100)
 
-    winner = p.run(eval_genomes, 50)
+    with open("best.pickle", "wb") as f:
+        pickle.dump(winner, f)
+
+def test_ai(config):
+    with open("best.pickle", "rb") as f:
+        winner = pickle.load(f)
+    run_test_ai(winner, config)
 
 if __name__ == "__main__":
     local_dir = os.path.dirname(__file__)
@@ -174,4 +207,5 @@ if __name__ == "__main__":
     config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
                          neat.DefaultSpeciesSet, neat.DefaultStagnation,
                          config_path)
-    run_neat(config)
+    #run_neat(config)
+    test_ai(config)
