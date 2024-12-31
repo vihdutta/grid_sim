@@ -25,7 +25,7 @@ class Entity(SimObject):
         self.locations_visited = defaultdict(int)
         self.same_location_times = 0
 
-    def move(self, direction, CELLS):
+    def move(self, direction, distances, CELLS):
         self.last_x = self.x
         self.last_y = self.y
 
@@ -38,57 +38,36 @@ class Entity(SimObject):
         elif direction == 3:  # right
             self.x += 1
 
-        self.__constrain_to_bounds(CELLS)
+        hit_wall = self.__constrain_to_bounds(CELLS)
         self.locations_visited[(self.x, self.y)] += 1
+        return hit_wall, distances.index(min(distances)) != direction
 
     def reward_for_closer(self, coin):
-        prev_dist = math.sqrt(math.pow(self.last_x - coin.x, 2) + math.pow(self.last_y - coin.y, 2))
-        curr_dist = math.sqrt(math.pow(self.x - coin.x, 2) + math.pow(self.y - coin.y, 2))
-        
-        moved_farther = curr_dist > prev_dist
-        revisited = self.locations_visited[(self.x, self.y)] > 1
-        same_location = self.last_x == self.x and self.last_y == self.y
-        if (moved_farther or revisited or same_location):
-            return self.__punish(moved_farther, revisited, same_location)
+        prev_dist = abs(self.last_x - coin.x) + abs(self.last_y - coin.y)
+        curr_dist = abs(self.x - coin.x) + abs(self.y - coin.y)
+        # self.locations_visited[(self.x, self.y)] > 1
+        # if curr_dist >= prev_dist or (self.last_x == self.x and self.last_y == self.y):
+        #     return -1
 
-        x_diff = abs(self.x - coin.x)
-        y_diff = abs(self.y - coin.y)
-
-        if x_diff == 0 and y_diff == 0:
-            return 10.0  # coin collected
-
-        manhattan_distance = x_diff + y_diff
-
-        if x_diff == y_diff:  # diagonal neighbors get less points (as you can't get to target diagonally)
-            return 1 / (manhattan_distance + 1)
-        else:  # direct neighbors
-            return 1 / manhattan_distance
-        
-    def __punish(self, moved_farther, revisited, same_location):
-        punishment = 0
-        if moved_farther:
-            #print("MOVED FARTHER")
-            with open("sim_log.txt", "a") as log_file:
-                log_file.write("MOVED FARTHER\n")
-            self.moved_farther_times += 1
-            punishment += self.moved_farther_times * 2
-        if revisited:
-            #print("REVISITED")
-            with open("sim_log.txt", "a") as log_file:
-                log_file.write("REVISITED\n")
-            self.revisited_times += 1
-            punishment += self.revisited_times * 2
-        if same_location:
-            #print("DIDN'T MOVE")
-            with open("sim_log.txt", "a") as log_file:
-                log_file.write("DIDN'T MOVE\n")
-            self.same_location_times += 1
-            punishment += self.same_location_times * 2
-        return -punishment
+        return 1 if curr_dist == 0 else 0
 
     def __constrain_to_bounds(self, CELLS):
-        self.x = max(1, min(self.x, CELLS-1))
-        self.y = max(1, min(self.y, CELLS-1))
+        constrained = False
+        if self.x < 1:
+            self.x = 1
+            constrained = True
+        elif self.x > CELLS:
+            self.x = CELLS
+            constrained = True
+
+        if self.y < 1:
+            self.y = 1
+            constrained = True
+        elif self.y > CELLS:
+            self.y = CELLS
+            constrained = True
+
+        return constrained
         
     def coords(self):
         print(f"Current coords: ({self.x}, {self.y})")
