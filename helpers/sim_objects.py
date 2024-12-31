@@ -1,6 +1,4 @@
-import math
 import pygame
-from collections import defaultdict
 
 class SimObject():
     def __init__(self, x, y, color):
@@ -20,10 +18,6 @@ class Entity(SimObject):
         self.last_x = x
         self.last_y = y
         self.score = 0
-        self.moved_farther_times = 0
-        self.revisited_times = 0
-        self.locations_visited = defaultdict(int)
-        self.same_location_times = 0
 
     def move(self, direction, distances, CELLS):
         self.last_x = self.x
@@ -39,17 +33,42 @@ class Entity(SimObject):
             self.x += 1
 
         hit_wall = self.__constrain_to_bounds(CELLS)
-        self.locations_visited[(self.x, self.y)] += 1
-        return hit_wall, distances.index(min(distances)) != direction
+        moved_unoptimal_direction = distances.index(min(distances)) != direction
+        return hit_wall, moved_unoptimal_direction
 
     def reward_for_closer(self, coin):
-        prev_dist = abs(self.last_x - coin.x) + abs(self.last_y - coin.y)
         curr_dist = abs(self.x - coin.x) + abs(self.y - coin.y)
-        # self.locations_visited[(self.x, self.y)] > 1
-        # if curr_dist >= prev_dist or (self.last_x == self.x and self.last_y == self.y):
-        #     return -1
-
         return 1 if curr_dist == 0 else 0
+    
+    def get_manhattan_distances(self, coin, CELLS):
+        def valid_position(x, y, CELLS):
+            return 1 <= x <= CELLS and 1 <= y <= CELLS
+        
+        # calculate up
+        if valid_position(self.x, self.y - 1, CELLS):
+            up = abs(self.x - coin.x) + abs(self.y - 1 - coin.y)
+        else:
+            up = float('inf')
+        
+        # calculate down
+        if valid_position(self.x, self.y + 1, CELLS):
+            down = abs(self.x - coin.x) + abs(self.y + 1 - coin.y)
+        else:
+            down = float('inf')
+        
+        # calculate left
+        if valid_position(self.x - 1, self.y, CELLS):
+            left = abs(self.x - 1 - coin.x) + abs(self.y - coin.y)
+        else:
+            left = float('inf')
+        
+        # calculate right
+        if valid_position(self.x + 1, self.y, CELLS):
+            right = abs(self.x + 1 - coin.x) + abs(self.y - coin.y)
+        else:
+            right = float('inf')
+        
+        return up, down, left, right
 
     def __constrain_to_bounds(self, CELLS):
         constrained = False
@@ -68,9 +87,6 @@ class Entity(SimObject):
             constrained = True
 
         return constrained
-        
-    def coords(self):
-        print(f"Current coords: ({self.x}, {self.y})")
 
 class Coin(SimObject):
     def __init__(self, x, y, color):
