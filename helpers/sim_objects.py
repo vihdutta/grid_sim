@@ -22,7 +22,7 @@ class Entity(SimObject):
     def move(self, direction, distances, CELLS):
         self.last_x = self.x
         self.last_y = self.y
-
+        # Move the entity based on the direction
         if direction == 0:  # up
             self.y -= 1
         elif direction == 1:  # down
@@ -31,44 +31,42 @@ class Entity(SimObject):
             self.x -= 1
         elif direction == 3:  # right
             self.x += 1
+        elif direction == 4:  # up-left
+            self.y -= 1
+            self.x -= 1
+        elif direction == 5:  # up-right
+            self.y -= 1
+            self.x += 1
+        elif direction == 6:  # down-left
+            self.y += 1
+            self.x -= 1
+        elif direction == 7:  # down-right
+            self.y += 1
+            self.x += 1
+        
 
         hit_wall = self.__constrain_to_bounds(CELLS)
-        moved_unoptimal_direction = distances.index(min(distances)) != direction
+        moved_unoptimal_direction = direction not in [i for i, value in enumerate(distances[:4]) if value == min(distances[:4])]
         return hit_wall, moved_unoptimal_direction
-
-    def reward_for_closer(self, coin):
-        curr_dist = abs(self.x - coin.x) + abs(self.y - coin.y)
-        return 1 if curr_dist == 0 else 0
     
     def get_manhattan_distances(self, coin, CELLS):
-        def valid_position(x, y, CELLS):
-            return 1 <= x <= CELLS and 1 <= y <= CELLS
+        # check if coin is straight in any direction
+        up = 1 if self.x == coin.x and self.y > coin.y else 0
+        down = 1 if self.x == coin.x and self.y < coin.y else 0
+        left = 1 if self.y == coin.y and self.x > coin.x else 0
+        right = 1 if self.y == coin.y and self.x < coin.x else 0
+        up_left = 1 if self.x > coin.x and self.y > coin.y else 0
+        up_right = 1 if self.x < coin.x and self.y > coin.y else 0
+        down_left = 1 if self.x > coin.x and self.y < coin.y else 0
+        down_right = 1 if self.x < coin.x and self.y < coin.y else 0
         
-        # calculate up
-        if valid_position(self.x, self.y - 1, CELLS):
-            up = abs(self.x - coin.x) + abs(self.y - 1 - coin.y)
-        else:
-            up = float('inf')
+        # distances to nearest wall (more like next to wall: true or false)
+        dist_up_wall = 1 if self.y - 1 == 0 else 0
+        dist_down_wall = 1 if CELLS - self.y == 0 else 0
+        dist_left_wall = 1 if self.x - 1 == 0 else 0
+        dist_right_wall = 1 if CELLS - self.x else 0
         
-        # calculate down
-        if valid_position(self.x, self.y + 1, CELLS):
-            down = abs(self.x - coin.x) + abs(self.y + 1 - coin.y)
-        else:
-            down = float('inf')
-        
-        # calculate left
-        if valid_position(self.x - 1, self.y, CELLS):
-            left = abs(self.x - 1 - coin.x) + abs(self.y - coin.y)
-        else:
-            left = float('inf')
-        
-        # calculate right
-        if valid_position(self.x + 1, self.y, CELLS):
-            right = abs(self.x + 1 - coin.x) + abs(self.y - coin.y)
-        else:
-            right = float('inf')
-        
-        return up, down, left, right
+        return (up, down, left, right, up_left, up_right, down_left, down_right, dist_up_wall, dist_down_wall, dist_left_wall, dist_right_wall)
 
     def __constrain_to_bounds(self, CELLS):
         constrained = False

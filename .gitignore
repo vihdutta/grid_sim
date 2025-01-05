@@ -1,6 +1,2 @@
 __pycache__/
 .venv/
-tests/
-*.pickle
-neat-*
-sim_log.txt
